@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>裁判文书脱敏工具</title>
+<style>
+  :root{
+    --ink:#1c2b3a;
+    --paper:#f6f3ea;
+    --paper-2:#ede8d8;
+    --seal:#8c2b2b;
+    --seal-2:#a83c3c;
+    --line:#c9c2ac;
+    --muted:#6b6558;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Songti SC","STSong","SimSun",serif;
+    background:var(--paper);
+    color:var(--ink);
+    padding:32px 24px 64px;
+  }
+  .wrap{max-width:960px;margin:0 auto;}
+  header{
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:18px;margin-bottom:24px;
+  }
+  .logo{
+    width:52px;height:52px;margin-bottom:10px;
+  }
+  h1{
+    font-size:26px;font-weight:700;margin:0;letter-spacing:4px;
+  }
+  .sub{color:var(--muted);font-size:13px;margin-top:6px;letter-spacing:1px;}
+  .mode-row{display:flex;gap:10px;margin-bottom:14px;}
+  .mode-btn{
+    flex:1;
+    border:1px solid var(--ink);
+    background:transparent;
+    padding:10px 8px;
+    font-family:inherit;font-size:14px;color:var(--ink);
+    cursor:pointer;border-radius:3px;
+  }
+  .mode-btn.active{background:var(--ink);color:var(--paper);}
+  .black-block{
+    display:inline-block;background:#111;color:#111;
+    padding:0 4px;border-radius:1px;user-select:none;
+  }
+  .panel{
+    background:var(--paper-2);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:18px 20px;
+    margin-bottom:20px;
+  }
+  .panel h2{
+    font-size:15px;margin:0 0 12px;font-weight:700;
+    display:flex;align-items:center;gap:8px;
+  }
+  .panel h2::before{
+    content:"";display:inline-block;width:8px;height:8px;background:var(--seal);
+  }
+  .fields{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:6px 16px;font-size:13px;margin-top:10px;
+  }
+  .fields label{display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink);}
+  .fields input[type=checkbox]{accent-color:var(--seal);}
+  textarea{
+    width:100%;min-height:220px;
+    font-family:inherit;font-size:14.5px;line-height:1.8;
+    background:#fffdf7;border:1px solid var(--line);border-radius:3px;
+    padding:14px;color:var(--ink);resize:vertical;
+  }
+  .row{display:flex;gap:20px;}
+  .col{flex:1;min-width:0;}
+  .mask-tag{
+    background:#e9e2c8;border:1px solid var(--seal-2);color:var(--seal);
+    padding:0 3px;border-radius:2px;font-weight:700;
+  }
+  .actions{display:flex;gap:10px;margin:14px 0 4px;flex-wrap:wrap;}
+  button.act{
+    font-family:inherit;font-size:13.5px;
+    border:1px solid var(--ink);background:var(--ink);color:var(--paper);
+    padding:9px 18px;border-radius:3px;cursor:pointer;
+  }
+  button.act.secondary{background:transparent;color:var(--ink);}
+  button.act:active{transform:scale(0.98);}
+  .stats{font-size:12.5px;color:var(--muted);margin-top:8px;}
+  .legend{
+    display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);
+    margin-top:10px;border-top:1px dashed var(--line);padding-top:10px;
+  }
+  .footer-note{font-size:11.5px;color:var(--muted);text-align:center;margin-top:26px;letter-spacing:.5px;}
+  ::selection{background:#e2c9a8;}
+  table.map-table{
+    width:100%;border-collapse:collapse;font-size:13px;
+  }
+  table.map-table th, table.map-table td{
+    border:1px solid var(--line);padding:6px 10px;text-align:left;
+  }
+  table.map-table th{background:var(--ink);color:var(--paper);font-weight:700;}
+  table.map-table tr:nth-child(even){background:#f0ebda;}
+  .map-empty{font-size:13px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <svg class="logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="32" r="29" fill="none" stroke="#8c2b2b" stroke-width="3"/>
+      <path d="M20 26h24M20 32h24M20 38h16" stroke="#1c2b3a" stroke-width="2.4" stroke-linecap="round"/>
+      <rect x="20" y="24" width="10" height="4" fill="#8c2b2b" opacity="0.85"/>
+    </svg>
+    <h1>裁判文书脱敏工具</h1>
+    <div class="sub">识别并处理当事人 · 审判人员 · 案号 · 身份信息 · 地址 · 金额等敏感内容 · 仅本地处理</div>
+  </header>
+
+  <div class="panel">
+    <h2>脱敏模式</h2>
+    <div class="mode-row">
+      <button class="mode-btn active" data-mode="replace">替换式脱敏（如"姓名1"）</button>
+      <button class="mode-btn" data-mode="block">遮蔽式脱敏（黑色块）</button>
+    </div>
+    <h2 style="margin-top:18px;">自定义字段</h2>
+    <div class="fields" id="fields"></div>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <div class="panel">
+        <h2>原文</h2>
+        <textarea id="input" placeholder="粘贴需要脱敏的法律文书原文……"></textarea>
+        <div class="stats" id="inStats">字数：0</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="panel">
+        <h2>脱敏结果</h2>
+        <textarea id="output" readonly placeholder="脱敏结果将在此显示"></textarea>
+        <div class="stats" id="outStats">已替换：0 处</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="act" id="btnRun">执行脱敏</button>
+    <button class="act secondary" id="btnCopy">复制结果</button>
+    <button class="act secondary" id="btnClear">清空</button>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="panel">
+    <h2>替换对照表</h2>
+    <div id="mapTableWrap"><div class="map-empty">执行脱敏后，此处将显示原文与替换值的对照表。</div></div>
+    <div class="actions" style="margin-top:12px;">
+      <button class="act secondary" id="btnCopyTable">复制对照表</button>
+      <button class="act secondary" id="btnDownloadTable">下载对照表 (CSV)</button>
+    </div>
+  </div>
+
+  <div class="footer-note">全部处理在浏览器本地完成，文本不会上传或发送至任何服务器 · 结果仅供参考，正式提交前请人工复核</div>
+</div>
+
+<script>
+const FIELD_DEFS = [
+  // 当事人称谓+姓名/名称：覆盖"上诉人（原审原告）张三"、"原告：张三"、"原告张三"等裁判文书常见写法
+  {key:'party', label:'当事人姓名', regex:/(?:公诉机关|自诉人|原告|被告|上诉人|被上诉人|申请人|被申请人|第三人|被告人|附带民事诉讼原告人|附带民事诉讼被告人|再审申请人|申诉人|被申诉人|执行申请人|被执行人|复议申请人|异议人|被异议人|证人|鉴定人|翻译人员)(?:（(?:原审|一审|二审)?[一-龥]{2,10}）)?[：:]?[一-龥]{2,6}(?:（曾用名[一-龥]{2,6}）)?(?=[，,。：:（(]|$)/g, minLevel:1, tagName:'当事人'},
+  // 审判人员/书记员/执行人员姓名
+  {key:'judge', label:'审判人员姓名', regex:/(?:审判长|审判员|代理审判员|人民陪审员|书记员|执行员|法官助理|独任审判员|执行局局长)[：:]?[一-龥]{2,4}/g, minLevel:1, tagName:'审判人员'},
+  // 法定代表人 / 负责人 / 委托诉讼代理人（含职务或律所信息的表述）
+  {key:'agent', label:'法定代表人 / 委托代理人', regex:/(?:法定代表人|负责人|委托诉讼代理人|辩护人|指定代理人|诉讼代理人)[：:]?[一-龥]{2,4}(?:，(?:系|职务为)?[一-龥（）()、·]{2,20})?/g, minLevel:1, tagName:'代理人'},
+  // 法院名称：覆盖最高、高级、中级、基层各级人民法院及专门法院
+  {key:'court', label:'法院名称', regex:/最高人民法院|[一-龥]{2,12}(?:省|市|自治区|自治州|盟|地区)?[一-龥]{0,10}(?:中级|高级|基层)?(?:人民法院|海事法院|铁路运输法院|知识产权法院|金融法院)/g, minLevel:1, tagName:'法院'},
+  // 案号：新式"(2023)京01民终1234号"及旧式"XX法民初字第123号"
+  {key:'caseno', label:'案号', regex:/[（(]\d{4}[）)][一-龥]{1,10}\d{1,8}号(?:之[一二三四五六七八九十\d]+)?|[一-龥]{2,10}法[一-龥]{0,6}(?:刑|民|行|执|赔)?(?:初|终|再|监)?字第\d{1,8}号/g, minLevel:1, tagName:'案号'},
+  // 出生日期（需在通用日期字段之前处理，避免被拆分匹配两次）
+  {key:'birthdate', label:'出生日期', regex:/\d{4}年\d{1,2}月\d{1,2}日(?=出生)/g, minLevel:1, tagName:'出生日期'},
+  // 身份证号（18位，含末位校验位X）
+  {key:'idcard', label:'身份证号', regex:/[1-9]\d{5}(?:18|19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dXx]/g, minLevel:1, tagName:'身份证'},
+  // 统一社会信用代码 / 组织机构代码（常见于公司当事人信息段）
+  {key:'creditcode', label:'统一社会信用代码', regex:/统一社会信用代码[：:]?[0-9A-HJ-NPQRTUWXY]{18}|组织机构代码[：:]?[0-9A-Z]{8}-[0-9A-Z]/g, minLevel:1, tagName:'信用代码'},
+  // 手机/电话：要求明确的手机号格式，或带"电话/联系方式"等标签的固话，减少与案号、字号等的误匹配
+  {key:'phone', label:'手机 / 电话号码', regex:/(?:\+?86[-\s]?)?1[3-9]\d{9}|(?:联系电话|联系方式|电话|手机)[：:]?(?:\d{3,4}-)?\d{7,8}/g, minLevel:1, tagName:'电话'},
+  // 银行账号（16-19位连续数字，常见于给付类判决的账户信息）
+  {key:'bank', label:'银行卡 / 账号', regex:/\b\d{16,19}\b/g, minLevel:1, tagName:'账号'},
+  {key:'email', label:'电子邮箱', regex:/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, minLevel:1, tagName:'邮箱'},
+  // 住址：裁判文书当事人信息段常见的"住XX省XX市XX区XX路XX号"写法
+  {key:'address', label:'住址 / 详细地址', regex:/住(?:[一-龥]{2,}(?:省|自治区|市))?[一-龥0-9]{2,}(?:市|区|县|旗)?[一-龥0-9]{2,}(?:街道|镇|乡|路|街|巷|小区|弄|村|组)?[一-龥0-9\-]{0,15}(?:号|室|楼|单元)?|[一-龥]{2,}(?:省|自治区|市)[一-龥]{2,}(?:市|区|县)[一-龥0-9]{2,}(?:街道|镇|乡|路|街|巷|小区|号院|弄)[一-龥0-9\-]{0,10}(?:号|室|楼)?/g, minLevel:1, tagName:'地址'},
+  // 通用日期（宣判日期、起诉日期、合同签订日期等），置于出生日期字段之后避免重复匹配
+  {key:'date', label:'具体日期', regex:/\d{4}年\d{1,2}月\d{1,2}日/g, minLevel:1, tagName:'日期'},
+  // 阿拉伯数字金额（判决给付金额、诉讼费等）
+  {key:'amount', label:'金额数字', regex:/(?:人民币)?[¥￥]?\d[\d,，]*(?:\.\d+)?\s?元(?:整)?/g, minLevel:1, tagName:'金额'},
+  // 中文大写金额（常见于合同、票据类判决书引用原文）
+  {key:'amount_cn', label:'中文大写金额', regex:/人民币[壹贰叁肆伍陆柒捌玖拾佰仟万亿元角分零整]{2,25}/g, minLevel:1, tagName:'大写金额'},
+  // 公司/单位名称
+  {key:'company', label:'公司 / 单位名称', regex:/[一-龥]{2,25}(?:有限公司|有限责任公司|股份有限公司|集团有限公司|集团|事务所|工作室|合作社|分公司|支行|分行)/g, minLevel:1, tagName:'单位'},
+  {key:'plate', label:'车牌号', regex:/[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼][A-Z][A-Z0-9]{5}/g, minLevel:1, tagName:'车牌'},
+];
+
+let customFields = new Set(FIELD_DEFS.map(f=>f.key));
+let mode = 'replace';
+
+function renderFields(){
+  const container = document.getElementById('fields');
+  container.innerHTML = '';
+  FIELD_DEFS.forEach(f=>{
+    const id = 'chk_'+f.key;
+    const label = document.createElement('label');
+    label.innerHTML = `<input type="checkbox" id="${id}" ${customFields.has(f.key)?'checked':''}> ${f.label}`;
+    container.appendChild(label);
+    label.querySelector('input').addEventListener('change', e=>{
+      if(e.target.checked) customFields.add(f.key); else customFields.delete(f.key);
+      renderLegend();
+    });
+  });
+}
+
+function setMode(m){
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.mode===m);
+  });
+  renderLegend();
+}
+
+function activeFields(){
+  return FIELD_DEFS.filter(f=>customFields.has(f.key));
+}
+
+function renderLegend(){
+  const legend = document.getElementById('legend');
+  const fields = activeFields();
+  if(mode==='block'){
+    legend.innerHTML = fields.map(f=>`<span><span class="black-block">████</span> ${f.label}</span>`).join('');
+  }else{
+    legend.innerHTML = fields.map(f=>`<span><span class="mask-tag">[${f.tagName}1]</span> ${f.label}</span>`).join('');
+  }
+}
+
+let lastEntities = [];
+let lastSegments = [];
+
+// 在原文上查找所有已启用字段的匹配，返回按位置排序、已解决重叠冲突的匹配列表
+function collectMatches(text){
+  const fields = activeFields();
+  let raw = [];
+  fields.forEach(f=>{
+    const re = new RegExp(f.regex.source, f.regex.flags);
+    let m;
+    while((m = re.exec(text)) !== null){
+      raw.push({start:m.index, end:m.index+m[0].length, text:m[0], field:f});
+      if(m[0].length===0) re.lastIndex++; // 防止零长度匹配死循环
+    }
+  });
+
+  // 重叠冲突解决：与原实现（字段按顺序依次替换）保持一致的优先级——
+  // 排在 FIELD_DEFS 前面的字段优先命中，后面字段若与已占用区间重叠则整体让出
+  const occupied = [];
+  const selected = [];
+  fields.forEach(f=>{
+    raw.filter(r=>r.field===f).sort((a,b)=>a.start-b.start).forEach(m=>{
+      const overlaps = occupied.some(([s,e])=> m.start < e && m.end > s);
+      if(!overlaps){
+        selected.push(m);
+        occupied.push([m.start, m.end]);
+      }
+    });
+  });
+  selected.sort((a,b)=>a.start-b.start);
+  return selected;
+}
+
+// 将原文解析为「分段」序列（普通文本 / 命中实体），每个实体只在首次出现时创建，
+// 之后同一字段下相同原文的重复出现都指向同一个实体，取消/重新替换时保持一致
+function maskText(text){
+  const matches = collectMatches(text);
+  const entities = [];
+  const seenByField = new Map(); // field.key -> Map(原文 -> entity索引)
+  const curMode = mode;
+
+  matches.forEach(m=>{
+    const f = m.field;
+    if(!seenByField.has(f.key)) seenByField.set(f.key, new Map());
+    const seen = seenByField.get(f.key);
+    let entIdx;
+    if(seen.has(m.text)){
+      entIdx = seen.get(m.text);
+    }else{
+      const counter = seen.size + 1;
+      const actualToken = curMode==='block'
+        ? '█'.repeat(Math.max(2, Math.min(m.text.length,6)))
+        : `${f.tagName}${counter}`;
+      entities.push({
+        field: f.label,
+        original: m.text,
+        actualToken,
+        token: curMode==='block' ? '(已遮蔽)' : actualToken,
+        mode: curMode,
+        restored: false
+      });
+      entIdx = entities.length - 1;
+      seen.set(m.text, entIdx);
+    }
+    m.entityIdx = entIdx;
+  });
+
+  const segments = [];
+  let cursor = 0;
+  matches.forEach(m=>{
+    if(m.start > cursor) segments.push({type:'text', value:text.slice(cursor, m.start)});
+    segments.push({type:'entity', idx:m.entityIdx});
+    cursor = m.end;
+  });
+  if(cursor < text.length) segments.push({type:'text', value:text.slice(cursor)});
+
+  return {segments, entities};
+}
+
+// 依据当前 entities 的 restored 状态，从 segments 重新拼装输出文本
+function renderOutputFromSegments(){
+  const out = lastSegments.map(seg=>{
+    if(seg.type==='text') return seg.value;
+    const e = lastEntities[seg.idx];
+    return e.restored ? e.original : e.actualToken;
+  }).join('');
+  document.getElementById('output').value = out;
+}
+
+function renderMapTable(entities){
+  const wrap = document.getElementById('mapTableWrap');
+  if(!entities.length){
+    wrap.innerHTML = '<div class="map-empty">未匹配到需要替换的敏感内容。</div>';
+    return;
+  }
+  let rows = entities.map((m,i)=>{
+    if(m.restored){
+      return `<tr style="opacity:.5;"><td>${escapeHtml(m.field)}</td><td>${escapeHtml(m.original)}</td><td>${escapeHtml(m.token)}</td><td>已恢复原文<button class="act secondary" style="padding:3px 10px;font-size:12px;margin-left:8px;" data-redo="${i}">重新替换</button></td></tr>`;
+    }
+    return `<tr><td>${escapeHtml(m.field)}</td><td>${escapeHtml(m.original)}</td><td>${escapeHtml(m.token)}</td><td><button class="act secondary" style="padding:3px 10px;font-size:12px;" data-undo="${i}">取消替换/遮蔽</button></td></tr>`;
+  }).join('');
+  wrap.innerHTML = `<table class="map-table"><thead><tr><th>字段类型</th><th>原文内容</th><th>替换值</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>`;
+
+  wrap.querySelectorAll('[data-undo]').forEach(btn=>{
+    btn.addEventListener('click', ()=> undoEntity(parseInt(btn.dataset.undo,10)));
+  });
+  wrap.querySelectorAll('[data-redo]').forEach(btn=>{
+    btn.addEventListener('click', ()=> redoEntity(parseInt(btn.dataset.redo,10)));
+  });
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// 该实体本身在文中可能出现多次（同字段同原文），一次性将其所有出现都恢复为原文，
+// 由于是按 entity 索引直接重渲染分段而非文本查找替换，不会影响其他实体（即使替换值/黑块视觉相同）
+function undoEntity(index){
+  const entry = lastEntities[index];
+  if(!entry || entry.restored) return;
+  entry.restored = true;
+  renderOutputFromSegments();
+  renderMapTable(lastEntities);
+  refreshOutStats();
+}
+
+// 重新对该实体执行替换/遮蔽（撤销"取消替换"操作）
+function redoEntity(index){
+  const entry = lastEntities[index];
+  if(!entry || !entry.restored) return;
+  entry.restored = false;
+  renderOutputFromSegments();
+  renderMapTable(lastEntities);
+  refreshOutStats();
+}
+
+function refreshOutStats(){
+  const total = lastEntities.length;
+  const restoredCount = lastEntities.filter(m=>m.restored).length;
+  document.getElementById('outStats').textContent =
+    `已替换：${total - restoredCount} 个不同实体（共 ${total} 个，已人工恢复 ${restoredCount} 个）`;
+}
+
+document.querySelectorAll('.mode-btn').forEach(b=>{
+  b.addEventListener('click', ()=> setMode(b.dataset.mode));
+});
+
+document.getElementById('input').addEventListener('input', e=>{
+  document.getElementById('inStats').textContent = '字数：'+e.target.value.length;
+});
+
+document.getElementById('btnRun').addEventListener('click', ()=>{
+  const src = document.getElementById('input').value;
+  const {segments, entities} = maskText(src);
+  lastSegments = segments;
+  lastEntities = entities;
+  renderOutputFromSegments();
+  renderMapTable(entities);
+  refreshOutStats();
+});
+
+document.getElementById('btnCopy').addEventListener('click', ()=>{
+  const out = document.getElementById('output');
+  out.select();
+  document.execCommand('copy');
+});
+
+document.getElementById('btnClear').addEventListener('click', ()=>{
+  document.getElementById('input').value='';
+  document.getElementById('output').value='';
+  document.getElementById('inStats').textContent='字数：0';
+  document.getElementById('outStats').textContent='已替换：0 处';
+  lastSegments = [];
+  lastEntities = [];
+  renderMapTable([]);
+});
+
+document.getElementById('btnCopyTable').addEventListener('click', ()=>{
+  if(!lastEntities.length) return;
+  const text = ['字段类型\t原文内容\t替换值', ...lastEntities.map(m=>`${m.field}\t${m.original}\t${m.token}`)].join('\n');
+  navigator.clipboard.writeText(text).catch(()=>{
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  });
+});
+
+document.getElementById('btnDownloadTable').addEventListener('click', ()=>{
+  if(!lastEntities.length) return;
+  const csv = ['\ufeff字段类型,原文内容,替换值', ...lastEntities.map(m=>`${m.field},"${m.original.replace(/"/g,'""')}",${m.token}`)].join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '脱敏替换对照表.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+renderFields();
+setMode('replace');
+</script>
+</body>
+</html>
