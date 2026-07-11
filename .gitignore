@@ -1,0 +1,88 @@
+# ==============================
+# 操作系统生成的文件
+# ==============================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ==============================
+# 编辑器 / IDE 配置文件
+# ==============================
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains (IntelliJ, WebStorm 等)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+*.un~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+
+# ==============================
+# 临时文件和缓存
+# ==============================
+*.tmp
+*.temp
+*.log
+*.cache
+*.bak
+*.backup
+*.orig
+*.rej
+
+# ==============================
+# Node.js / npm / yarn (如将来使用)
+# ==============================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.pnpm-debug.log*
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+# 构建输出目录（如将来使用打包工具）
+dist/
+build/
+out/
+
+# ==============================
+# 测试覆盖率报告
+# ==============================
+coverage/
+.nyc_output/
+
+# ==============================
+# 项目特定（如有自定义）
+# ==============================
+# 如果生成了一些临时结果文件，可以加上
+# output.txt
+# temp/
